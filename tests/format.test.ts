@@ -1,0 +1,32 @@
+import { describe, it, expect } from "vitest";
+import { formatDuration, formatTime, dayLabel } from "@/lib/format";
+
+describe("formatDuration", () => {
+  it("m:ss under an hour", () => {
+    expect(formatDuration(0)).toBe("0:00");
+    expect(formatDuration(42)).toBe("0:42");
+    expect(formatDuration(728)).toBe("12:08");
+  });
+  it("h:mm:ss past an hour", () => expect(formatDuration(3725)).toBe("1:02:05"));
+  it("dash for missing", () => {
+    expect(formatDuration(null)).toBe("—");
+    expect(formatDuration(undefined)).toBe("—");
+  });
+});
+
+describe("formatTime and dayLabel", () => {
+  const now = new Date("2026-09-02T20:00:00-07:00");
+  it("time of day for today", () => {
+    const d = new Date("2026-09-02T14:14:00-07:00");
+    expect(formatTime(d, now)).toBe("2:14 PM");
+    expect(dayLabel(d, now)).toBe("Today");
+  });
+  it("Yesterday label", () => {
+    const d = new Date("2026-09-01T18:30:00-07:00");
+    expect(dayLabel(d, now)).toBe("Yesterday");
+  });
+  it("weekday-month-day for older", () => {
+    const d = new Date("2026-08-20T09:00:00-07:00");
+    expect(dayLabel(d, now)).toBe("Thu, Aug 20");
+  });
+});
