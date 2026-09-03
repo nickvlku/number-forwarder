@@ -20,9 +20,18 @@ function ymd(d: Date): string {
 
 export function dayLabel(d: Date, now: Date = new Date()): string {
   const today = ymd(now);
-  const yesterday = ymd(new Date(now.getTime() - 86_400_000));
   const target = ymd(d);
   if (target === today) return "Today";
+
+  // Compute yesterday using calendar-day arithmetic to handle DST transitions
+  const [y, m, day] = today.split("-").map(Number);
+  const yesterday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date(Date.UTC(y, m - 1, day - 1)));
+
   if (target === yesterday) return "Yesterday";
   return new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", month: "short", day: "numeric" }).format(d);
 }

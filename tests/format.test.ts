@@ -29,4 +29,9 @@ describe("formatTime and dayLabel", () => {
     const d = new Date("2026-08-20T09:00:00-07:00");
     expect(dayLabel(d, now)).toBe("Thu, Aug 20");
   });
+  it("Yesterday survives the DST spring-forward day", () => {
+    const dstNow = new Date("2027-03-15T00:30:00-07:00");
+    const d = new Date("2027-03-14T12:00:00-07:00");
+    expect(dayLabel(d, dstNow)).toBe("Yesterday");
+  });
 });
