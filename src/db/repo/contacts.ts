@@ -1,6 +1,7 @@
 import { asc, sql } from "drizzle-orm";
 import type { DB } from "@/db";
 import { contacts, type Contact } from "@/db/schema";
+import { normalizePhone, formatPhone } from "@/lib/phone";
 
 export async function getContact(db: DB, phone: string): Promise<Contact | null> {
   const row = await db.query.contacts.findFirst({ where: (c, { eq }) => eq(c.phone, phone) });
@@ -27,4 +28,11 @@ export async function listContacts(db: DB): Promise<Contact[]> {
     .select()
     .from(contacts)
     .orderBy(sql`${contacts.name} IS NULL`, asc(contacts.name), asc(contacts.phone));
+}
+
+export async function displayNameFor(db: DB, rawFrom: string): Promise<string> {
+  const phone = normalizePhone(rawFrom);
+  if (!phone) return "Unknown number";
+  const c = await getContact(db, phone);
+  return c?.name?.trim() || formatPhone(phone);
 }
