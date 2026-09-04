@@ -21,4 +21,11 @@ describe("pillFor", () => {
     (stale as { call: { startedAt: Date } }).call.startedAt = new Date(Date.now() - 60 * 60_000);
     expect(pillFor(stale).label).toBe("Missed");
   });
+
+  it("shows Missed for a stale voicemail-status call with no recording, Voicemail when fresh", () => {
+    const stale = call("voicemail");
+    (stale as { call: { startedAt: Date } }).call.startedAt = new Date(Date.now() - 60 * 60_000);
+    expect(pillFor(stale).label).toBe("Missed");
+    expect(pillFor(call("voicemail")).label).toBe("Voicemail");
+  });
 });

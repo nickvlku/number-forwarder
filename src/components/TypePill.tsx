@@ -5,7 +5,7 @@ export type PillTone = "answered" | "voicemail" | "missed" | "text" | "pending";
 
 export function pillFor(item: FeedItem): { label: string; tone: PillTone } {
   if (item.kind === "text") return { label: "Text", tone: "text" };
-  switch (effectiveStatus(item.call)) {
+  switch (effectiveStatus(item.call, new Date(), { hasVoicemail: item.voicemail !== null })) {
     case "completed": return { label: "Answered", tone: "answered" };
     case "voicemail": return { label: "Voicemail", tone: "voicemail" };
     case "voicemail_pending": return { label: "Recording", tone: "pending" };

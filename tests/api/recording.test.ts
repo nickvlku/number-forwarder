@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { dbMockFactory, envMockFactory, nextServerMockFactory, handlerTestContext, flushAfter } from "../helpers/handlers";
 import { signedRequest, voiceParams } from "../helpers/twilio";
-import { createCall } from "@/db/repo/calls";
-import { getVoicemail } from "@/db/repo/voicemails";
+import { createCall, getCall, setCallStatus } from "@/db/repo/calls";
+import { getVoicemail, claimVoicemail } from "@/db/repo/voicemails";
 import { calls, voicemails } from "@/db/schema";
 
 vi.mock("@/db", () => dbMockFactory());
@@ -61,5 +61,22 @@ describe("POST /api/twilio/recording", () => {
     await flushAfter();
     expect(await getVoicemail(db, "RE1")).toBeNull();
     expect(processVoicemail).not.toHaveBeenCalled();
+  });
+
+  it("marks the call missed when Twilio reports the recording absent (hang-up at the beep)", async () => {
+    await setCallStatus(db, SID, "voicemail");
+    const res = await recording(signedRequest("/api/twilio/recording", params({ RecordingStatus: "absent", RecordingDuration: "-1" })));
+    expect(res.status).toBe(200);
+    await flushAfter();
+    expect((await getCall(db, SID))?.status).toBe("missed");
+    expect(await getVoicemail(db, "RE1")).toBeNull();
+    expect(processVoicemail).not.toHaveBeenCalled();
+  });
+
+  it("does not downgrade a call that already has a voicemail row when a later callback says absent", async () => {
+    await setCallStatus(db, SID, "voicemail");
+    await claimVoicemail(db, { recordingSid: "RE0", callSid: SID, durationSeconds: 30 });
+    await recording(signedRequest("/api/twilio/recording", params({ RecordingStatus: "absent", RecordingSid: "RE1" })));
+    expect((await getCall(db, SID))?.status).toBe("voicemail");
   });
 });

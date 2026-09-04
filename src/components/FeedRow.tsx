@@ -15,13 +15,14 @@ export function preview(item: FeedItem): string {
   if (item.kind === "text") {
     return item.message.body.trim() || `${item.message.media.length} attachment${item.message.media.length === 1 ? "" : "s"}`;
   }
-  const status = effectiveStatus(item.call);
+  const status = effectiveStatus(item.call, new Date(), { hasVoicemail: item.voicemail !== null });
   if (item.voicemail?.transcript) return item.voicemail.transcript;
   if (item.voicemail?.transcriptionStatus === "failed") return "Transcription failed";
   if (item.voicemail) return "Transcribing…";
   if (status === "completed") return item.call.accepted ? "Accepted after whisper" : "Answered";
   if (status === "missed") return "No message left";
   if (status === "failed") return "Call failed";
+  if (status === "voicemail") return "Waiting for the recording…";
   return "In progress";
 }
 

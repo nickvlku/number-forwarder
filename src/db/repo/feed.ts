@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, gte, or, isNull, count, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, gte, or, isNull, count, exists, notExists, sql, type SQL } from "drizzle-orm";
 import type { DB } from "@/db";
 import { calls, voicemails, messages, contacts, type Call, type Voicemail, type Message, type Contact, type CallStatus } from "@/db/schema";
 
@@ -11,10 +11,14 @@ export type FeedItem =
 
 export const STALE_MS = 15 * 60_000;
 
-export function effectiveStatus(call: Call, now: Date = new Date()): CallStatus {
-  if ((call.status === "ringing" || call.status === "voicemail_pending") && now.getTime() - call.startedAt.getTime() > STALE_MS) {
-    return "missed";
-  }
+/**
+ * What the dashboard shows. A call stuck in a transient state past STALE_MS lost a callback and reads as missed.
+ * A `voicemail` call whose recording never arrived (hasVoicemail === false) is treated the same way.
+ */
+export function effectiveStatus(call: Call, now: Date = new Date(), opts: { hasVoicemail?: boolean } = {}): CallStatus {
+  const stale = now.getTime() - call.startedAt.getTime() > STALE_MS;
+  if ((call.status === "ringing" || call.status === "voicemail_pending") && stale) return "missed";
+  if (call.status === "voicemail" && opts.hasVoicemail === false && stale) return "missed";
   return call.status;
 }
 
@@ -42,16 +46,29 @@ function textItem(row: { messages: Message; contacts: Contact | null }): FeedIte
 }
 
 /** SQL mirror of effectiveStatus(): stale ringing/voicemail_pending rows count as missed. */
+/** Correlated subquery: does this call have a voicemails row? Mirrors `hasVoicemail` in effectiveStatus. */
+function db_hasRecording() {
+  return sql`(select 1 from ${voicemails} where ${voicemails.callSid} = ${calls.sid})`;
+}
+
 function callFilterFor(filter: FeedFilter, now: Date): SQL | undefined {
   const cutoff = new Date(now.getTime() - STALE_MS);
   const pendingStatuses: CallStatus[] = ["ringing", "voicemail_pending"];
+  const hasRecording = db_hasRecording();
   switch (filter) {
     case "answered":
       return inArray(calls.status, ["completed"]);
     case "voicemail":
-      return or(eq(calls.status, "voicemail"), and(eq(calls.status, "voicemail_pending"), gte(calls.startedAt, cutoff)));
+      return or(
+        and(eq(calls.status, "voicemail"), or(gte(calls.startedAt, cutoff), exists(hasRecording))),
+        and(eq(calls.status, "voicemail_pending"), gte(calls.startedAt, cutoff)),
+      );
     case "missed":
-      return or(inArray(calls.status, ["missed", "failed"]), and(inArray(calls.status, pendingStatuses), lt(calls.startedAt, cutoff)));
+      return or(
+        inArray(calls.status, ["missed", "failed"]),
+        and(inArray(calls.status, pendingStatuses), lt(calls.startedAt, cutoff)),
+        and(eq(calls.status, "voicemail"), lt(calls.startedAt, cutoff), notExists(hasRecording)),
+      );
     default:
       return undefined;
   }

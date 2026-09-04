@@ -104,4 +104,28 @@ describe("effectiveStatus", () => {
     expect(effectiveStatus(call, t(5))).toBe("ringing");
     expect(effectiveStatus(call, t(20))).toBe("missed");
   });
+  it("treats a stale voicemail with no recording as missed, a fresh one as voicemail", () => {
+    const call = { status: "voicemail", startedAt: t(0) } as never;
+    expect(effectiveStatus(call, t(5), { hasVoicemail: false })).toBe("voicemail");
+    expect(effectiveStatus(call, t(20), { hasVoicemail: false })).toBe("missed");
+    expect(effectiveStatus(call, t(20), { hasVoicemail: true })).toBe("voicemail");
+    expect(effectiveStatus(call, t(20))).toBe("voicemail");
+  });
+});
+
+describe("listFeed filters agree with effectiveStatus for a voicemail that never got a recording", () => {
+  it("shows a stale recording-less voicemail under Missed, not Voicemail", async () => {
+    const now = new Date();
+    await db.insert(calls).values([
+      { sid: "CA_norec_stale", fromNumber: "+14155550000", toNumber: "+1", status: "voicemail", startedAt: new Date(now.getTime() - 20 * 60_000) },
+      { sid: "CA_norec_fresh", fromNumber: "+14155550000", toNumber: "+1", status: "voicemail", startedAt: new Date(now.getTime() - 60_000) },
+    ]);
+    const missed = (await listFeed(db, { filter: "missed", limit: 20 })).items.map((i) => i.id);
+    const voicemail = (await listFeed(db, { filter: "voicemail", limit: 20 })).items.map((i) => i.id);
+    expect(missed).toContain("CA_norec_stale");
+    expect(missed).not.toContain("CA_norec_fresh");
+    expect(voicemail).toContain("CA_norec_fresh");
+    expect(voicemail).toContain("CA3");
+    expect(voicemail).not.toContain("CA_norec_stale");
+  });
 });

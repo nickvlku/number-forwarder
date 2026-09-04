@@ -10,7 +10,7 @@ import { displayName } from "./FeedRow";
 export function CallDetail({ item }: { item: Extract<FeedItem, { kind: "call" }> }) {
   const { call, voicemail } = item;
   const phone = normalizePhone(call.fromNumber);
-  const status = effectiveStatus(call);
+  const status = effectiveStatus(call, new Date(), { hasVoicemail: voicemail !== null });
   const answeredAt = call.accepted && call.talkSeconds != null && call.endedAt
     ? new Date(call.endedAt.getTime() - call.talkSeconds * 1000)
     : null;
