@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getDb } from "@/db/get";
 import { requireSession } from "@/lib/session";
 import { normalizePhone } from "@/lib/phone";
@@ -29,7 +30,8 @@ export async function retryTranscription(recordingSid: string): Promise<void> {
   const db = await getDb();
   const vm = await getVoicemail(db, recordingSid);
   if (!vm) return;
+  if (vm.transcriptionStatus === "in_progress") return;
   const claim = await claimVoicemail(db, { recordingSid, callSid: vm.callSid, durationSeconds: vm.durationSeconds });
-  if (claim === "claimed") await processVoicemail(db, recordingSid);
+  if (claim === "claimed") after(() => processVoicemail(db, recordingSid));
   revalidatePath("/");
 }

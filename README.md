@@ -12,7 +12,9 @@ Design: `docs/superpowers/specs/2026-09-02-number-forwarder-design.md`
    `DATABASE_URL=postgres://localhost:55432/number_forwarder`; then
    `createdb -h localhost -p 55432 number_forwarder`.
 2. `cp .env.example .env.local` and fill it in. `SESSION_SECRET`: `openssl rand -hex 32`.
-3. `npm install && npm run db:migrate && npm run db:seed`
+3. `npm install && npm run db:migrate && npm run db:seed` (these load `.env.local` automatically via
+   `--env-file-if-exists`; the Fly release command runs `node scripts/migrate.mjs` directly, without that
+   flag, since production has no `.env.local`)
 4. `npm run dev`, open http://localhost:3000, sign in with `DASHBOARD_PASSWORD`.
 5. To receive real webhooks locally: `ngrok http 3000`, then
    `npm run twilio:configure -- https://<your-ngrok-host>` and set `PUBLIC_BASE_URL` in `.env.local`

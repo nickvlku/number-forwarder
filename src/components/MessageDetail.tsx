@@ -1,6 +1,6 @@
 import type { FeedItem } from "@/db/repo/feed";
 import { formatPhone, normalizePhone } from "@/lib/phone";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, isRelayPending } from "@/lib/format";
 import { ContactCard } from "./ContactCard";
 import { TypePill } from "./TypePill";
 import { displayName } from "./FeedRow";
@@ -8,6 +8,7 @@ import { displayName } from "./FeedRow";
 export function MessageDetail({ item }: { item: Extract<FeedItem, { kind: "text" }> }) {
   const { message } = item;
   const phone = normalizePhone(message.fromNumber);
+  const stillRelaying = isRelayPending(message);
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       <div>
@@ -30,7 +31,13 @@ export function MessageDetail({ item }: { item: Extract<FeedItem, { kind: "text"
           )}
         </div>
       )}
-      {message.forwardedAt ? <p className="muted text-xs">Relayed to your cell.</p> : <p className="text-xs text-danger">Relay to your cell failed.</p>}
+      {message.forwardedAt ? (
+        <p className="muted text-xs">Relayed to your cell.</p>
+      ) : stillRelaying ? (
+        <p className="muted text-xs">Relaying to your cell…</p>
+      ) : (
+        <p className="text-xs text-danger">Relay to your cell failed.</p>
+      )}
       {phone && <ContactCard key={phone} phone={phone} name={item.contact?.name ?? ""} notes={item.contact?.notes ?? ""} />}
     </div>
   );

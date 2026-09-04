@@ -11,6 +11,7 @@ export function ForwardingToggle({ enabled }: { enabled: boolean }) {
       type="button"
       role="switch"
       aria-checked={optimistic}
+      aria-label="Forwarding"
       disabled={pending}
       onClick={() =>
         start(async () => {
@@ -18,9 +19,21 @@ export function ForwardingToggle({ enabled }: { enabled: boolean }) {
           await toggleForwarding(!optimistic);
         })
       }
-      className="flex items-center gap-2 text-sm font-semibold"
+      className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap"
     >
-      <span className={optimistic ? "" : "muted"}>{optimistic ? "Forwarding on" : "Forwarding off"}</span>
+      <span className={optimistic ? "" : "muted"}>
+        {optimistic ? (
+          <>
+            <span className="hidden sm:inline">Forwarding on</span>
+            <span className="sm:hidden">On</span>
+          </>
+        ) : (
+          <>
+            <span className="hidden sm:inline">Forwarding off</span>
+            <span className="sm:hidden">Off</span>
+          </>
+        )}
+      </span>
       <span className={`switch ${optimistic ? "switch-on" : ""}`} aria-hidden />
     </button>
   );

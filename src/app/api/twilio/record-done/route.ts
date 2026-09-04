@@ -1,12 +1,11 @@
 import { after } from "next/server";
 import { getDb } from "@/db/get";
 import { readWebhook, twiml } from "@/lib/twilio/webhook";
-import { hangupTwiml } from "@/lib/twilio/twiml";
+import { hangupTwiml, MIN_MESSAGE_SECONDS } from "@/lib/twilio/twiml";
 import { setCallStatus } from "@/db/repo/calls";
 import { deleteRecording } from "@/lib/twilio/rest";
 
 export const dynamic = "force-dynamic";
-const MIN_MESSAGE_SECONDS = 2;
 
 export async function POST(req: Request): Promise<Response> {
   const hook = await readWebhook(req);

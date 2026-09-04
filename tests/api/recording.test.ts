@@ -54,4 +54,12 @@ describe("POST /api/twilio/recording", () => {
     expect(res.status).toBe(200);
     expect(await getVoicemail(db, "RE1")).toBeNull();
   });
+
+  it("ignores recordings under 2 seconds", async () => {
+    const res = await recording(signedRequest("/api/twilio/recording", params({ RecordingDuration: "1" })));
+    expect(res.status).toBe(200);
+    await flushAfter();
+    expect(await getVoicemail(db, "RE1")).toBeNull();
+    expect(processVoicemail).not.toHaveBeenCalled();
+  });
 });

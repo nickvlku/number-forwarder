@@ -39,3 +39,25 @@ export function dayLabel(d: Date, now: Date = new Date()): string {
 export function formatDateTime(d: Date): string {
   return `${dayLabel(d)} ${formatTime(d)}`;
 }
+
+const DIAL_STATUS_LABELS: Record<string, string> = {
+  "no-answer": "no answer",
+  busy: "busy",
+  failed: "call failed",
+  canceled: "caller hung up",
+  completed: "declined at whisper",
+  forwarding_off: "forwarding was off",
+  caller_hung_up: "caller hung up",
+  unknown: "no answer",
+};
+
+export function dialStatusLabel(status: string | null): string {
+  return DIAL_STATUS_LABELS[status ?? "unknown"] ?? "no answer";
+}
+
+const RELAY_GRACE_MS = 2 * 60_000;
+
+/** True while a text is still within its relay grace window and hasn't been forwarded yet. */
+export function isRelayPending(o: { forwardedAt: Date | null; receivedAt: Date }, now: Date = new Date()): boolean {
+  return !o.forwardedAt && now.getTime() - o.receivedAt.getTime() < RELAY_GRACE_MS;
+}

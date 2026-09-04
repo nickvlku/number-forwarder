@@ -12,7 +12,10 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const db = await getDb();
     const call = await getCall(db, CallSid);
-    if (!call) return new Response(null, { status: 200 });
+    if (!call) {
+      console.warn("status callback for unknown call", { CallSid });
+      return new Response(null, { status: 200 });
+    }
     const endedAt = Timestamp && !Number.isNaN(Date.parse(Timestamp)) ? new Date(Timestamp) : new Date();
     await finishCall(db, CallSid, { endedAt, totalSeconds: Number.parseInt(CallDuration ?? "0", 10) || 0 });
     if (call.status === "ringing") await setCallStatus(db, CallSid, "missed", { dialStatus: "caller_hung_up" });

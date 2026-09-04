@@ -1,3 +1,6 @@
+/** A recording shorter than this is dead air (hang up during the beep, etc.), not a message. */
+export const MIN_MESSAGE_SECONDS = 2;
+
 export function escapeXml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

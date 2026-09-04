@@ -11,8 +11,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node scripts/migrate.mjs",
-    "db:seed": "tsx scripts/seed.ts",
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
+    "db:seed": "node --env-file-if-exists=.env.local --import tsx scripts/seed.ts",
     "twilio:configure": "tsx scripts/configure-twilio.ts"
   },
   "dependencies": {

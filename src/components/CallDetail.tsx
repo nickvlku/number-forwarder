@@ -1,7 +1,7 @@
 import type { FeedItem } from "@/db/repo/feed";
 import { effectiveStatus } from "@/db/repo/feed";
 import { formatPhone, normalizePhone } from "@/lib/phone";
-import { formatDateTime, formatTime, formatDuration } from "@/lib/format";
+import { formatDateTime, formatTime, formatDuration, dialStatusLabel } from "@/lib/format";
 import { retryTranscription } from "@/app/(dashboard)/actions";
 import { ContactCard } from "./ContactCard";
 import { TypePill } from "./TypePill";
@@ -30,7 +30,14 @@ export function CallDetail({ item }: { item: Extract<FeedItem, { kind: "call" }>
         <div className="timeline text-sm">
           <div><span className="num font-semibold">{formatTime(call.startedAt)}</span> Incoming call</div>
           {answeredAt && <div><span className="num font-semibold">{formatTime(answeredAt)}</span> Accepted, talked {formatDuration(call.talkSeconds)}</div>}
-          {!call.accepted && status !== "ringing" && <div className="muted">No answer{call.dialStatus ? ` (${call.dialStatus})` : ""}</div>}
+          {!call.accepted && status !== "ringing" && (
+            <div className="muted">
+              {(() => {
+                const label = dialStatusLabel(call.dialStatus);
+                return label === "no answer" ? "No answer" : `No answer · ${label}`;
+              })()}
+            </div>
+          )}
           {voicemail && <div>Voicemail {formatDuration(voicemail.durationSeconds)}</div>}
           {call.endedAt && <div><span className="num font-semibold">{formatTime(call.endedAt)}</span> Ended · total {formatDuration(call.totalSeconds)}</div>}
         </div>
