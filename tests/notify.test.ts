@@ -38,6 +38,13 @@ describe("composeVoicemailSms", () => {
     const s = notify.composeVoicemailSms({ ...base, transcript: null });
     expect(s).toContain("Transcription unavailable, listen in the dashboard.");
   });
+
+  it("caps a very long display name so the whole message stays under 320 chars", () => {
+    const s = notify.composeVoicemailSms({ ...base, displayName: "X".repeat(400), transcript: "word ".repeat(100) });
+    expect(s.length).toBeLessThanOrEqual(320);
+    expect(s).toMatch(/^\[THE VLKU\] Voicemail from X{59}… \(0:42\)\n/);
+    expect(s.endsWith("https://vlku.test/calls/CA1")).toBe(true);
+  });
 });
 
 describe("composeTextRelay", () => {
@@ -48,6 +55,11 @@ describe("composeTextRelay", () => {
     expect(notify.composeTextRelay({ displayName: "+1 (415) 555-0199", body: "", mediaCount: 2 })).toBe(
       "[THE VLKU] +1 (415) 555-0199: (2 attachments, see dashboard)",
     );
+  });
+
+  it("caps a very long sender name", () => {
+    const s = notify.composeTextRelay({ displayName: "Y".repeat(100), body: "hi", mediaCount: 0 });
+    expect(s).toBe(`[THE VLKU] ${"Y".repeat(59)}…: hi`);
   });
 });
 

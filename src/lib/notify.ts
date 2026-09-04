@@ -3,7 +3,12 @@ import { formatDuration } from "@/lib/format";
 import { sendSms } from "@/lib/twilio/rest";
 
 const MAX_SMS = 320;
+const MAX_NAME = 60;
 const PREFIX = "[THE VLKU]";
+
+function capName(s: string): string {
+  return s.length > MAX_NAME ? s.slice(0, MAX_NAME - 1).trimEnd() + "…" : s;
+}
 
 export function composeVoicemailSms(o: {
   displayName: string;
@@ -12,10 +17,11 @@ export function composeVoicemailSms(o: {
   callSid: string;
   baseUrl: string;
 }): string {
-  const head = `${PREFIX} Voicemail from ${o.displayName} (${formatDuration(o.durationSeconds)})`;
+  const name = capName(o.displayName);
+  const head = `${PREFIX} Voicemail from ${name} (${formatDuration(o.durationSeconds)})`;
   const link = `${o.baseUrl}/calls/${o.callSid}`;
   if (!o.transcript) return `${head}\nTranscription unavailable, listen in the dashboard.\n${link}`;
-  const budget = MAX_SMS - head.length - link.length - 2 /* newlines */ - 2 /* quotes */;
+  const budget = Math.max(0, MAX_SMS - head.length - link.length - 4 /* newlines + quotes */);
   let body = o.transcript.replace(/\s+/g, " ").trim();
   if (body.length > budget) body = body.slice(0, Math.max(0, budget - 3)).trimEnd() + "...";
   return `${head}\n"${body}"\n${link}`;
@@ -25,7 +31,7 @@ export function composeTextRelay(o: { displayName: string; body: string; mediaCo
   const parts: string[] = [];
   if (o.body.trim()) parts.push(o.body.trim());
   if (o.mediaCount > 0) parts.push(`(${o.mediaCount} attachment${o.mediaCount === 1 ? "" : "s"}, see dashboard)`);
-  return `${PREFIX} ${o.displayName}: ${parts.join(" ")}`;
+  return `${PREFIX} ${capName(o.displayName)}: ${parts.join(" ")}`;
 }
 
 const RETRY_DELAY_MS = 30_000;
