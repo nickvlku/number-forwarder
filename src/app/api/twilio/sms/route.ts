@@ -27,12 +27,16 @@ export async function POST(req: Request): Promise<Response> {
     const inserted = await insertMessage(db, { sid, from, body: p.Body ?? "", media });
     if (inserted) {
       after(async () => {
-        const body = composeTextRelay({
-          displayName: await displayNameFor(db, from),
-          body: p.Body ?? "",
-          mediaCount: media.length,
-        });
-        if (await sendWithRetry(body)) await setForwarded(db, sid);
+        try {
+          const body = composeTextRelay({
+            displayName: await displayNameFor(db, from),
+            body: p.Body ?? "",
+            mediaCount: media.length,
+          });
+          if (await sendWithRetry(body)) await setForwarded(db, sid);
+        } catch (err) {
+          console.error("sms relay failed", { sid, err });
+        }
       });
     }
   } catch (err) {

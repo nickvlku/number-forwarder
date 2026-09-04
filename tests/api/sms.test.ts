@@ -61,4 +61,14 @@ describe("POST /api/twilio/sms", () => {
     expect(res.status).toBe(403);
     expect(await getMessage(db, "SM1")).toBeNull();
   });
+
+  it("still stores the text and returns 200 when the relay throws", async () => {
+    sendWithRetry.mockRejectedValueOnce(new Error("twilio down"));
+    const res = await sms(signedRequest("/api/twilio/sms", params()));
+    expect(res.status).toBe(200);
+    await flushAfter();
+    const m = await getMessage(db, "SM1");
+    expect(m?.body).toBe("Are you still coming Saturday?");
+    expect(m?.forwardedAt).toBeNull();
+  });
 });
