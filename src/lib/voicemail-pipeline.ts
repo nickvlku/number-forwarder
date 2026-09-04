@@ -34,26 +34,35 @@ export async function processVoicemail(db: DB, recordingSid: string): Promise<vo
   const call = await getCall(db, vm.callSid);
   if (!call) return;
 
-  await setTranscriptionStatus(db, recordingSid, "in_progress");
-  let transcript: string | null = null;
   try {
-    const audio = await downloadWithRetry(recordingSid);
-    transcript = await transcribe(audio, `${recordingSid}.mp3`);
-    await setTranscriptionStatus(db, recordingSid, "done", { transcript });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("voicemail pipeline failed", { recordingSid, message });
-    await setTranscriptionStatus(db, recordingSid, "failed", { error: message.slice(0, 500) });
-  }
+    await setTranscriptionStatus(db, recordingSid, "in_progress");
+    let transcript: string | null = null;
+    try {
+      const audio = await downloadWithRetry(recordingSid);
+      transcript = await transcribe(audio, `${recordingSid}.mp3`);
+      await setTranscriptionStatus(db, recordingSid, "done", { transcript });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("voicemail pipeline failed", { recordingSid, message });
+      await setTranscriptionStatus(db, recordingSid, "failed", { error: message.slice(0, 500) });
+    }
 
-  if (!vm.notifiedAt) {
-    const body = composeVoicemailSms({
-      displayName: await displayNameFor(db, call.fromNumber),
-      durationSeconds: vm.durationSeconds,
-      transcript,
-      callSid: call.sid,
-      baseUrl: env.PUBLIC_BASE_URL,
-    });
-    if (await sendWithRetry(body)) await setNotified(db, recordingSid);
+    if (!vm.notifiedAt) {
+      const body = composeVoicemailSms({
+        displayName: await displayNameFor(db, call.fromNumber),
+        durationSeconds: vm.durationSeconds,
+        transcript,
+        callSid: call.sid,
+        baseUrl: env.PUBLIC_BASE_URL,
+      });
+      if (await sendWithRetry(body)) await setNotified(db, recordingSid);
+    }
+  } catch (err) {
+    console.error("voicemail pipeline crashed", { recordingSid, err });
+    try {
+      await setTranscriptionStatus(db, recordingSid, "failed", { error: String(err).slice(0, 500) });
+    } catch {
+      // best effort; the function must never reject
+    }
   }
 }

@@ -71,4 +71,12 @@ describe("processVoicemail", () => {
     await processVoicemail(db, "RE1");
     expect(sendWithRetry).toHaveBeenCalledTimes(1);
   });
+
+  it("never rejects even when a status write fails, and marks the row failed", async () => {
+    fetchRecording.mockResolvedValue(new Response("mp3bytes", { status: 200 }));
+    transcribe.mockResolvedValue("hello");
+    sendWithRetry.mockRejectedValueOnce(new Error("boom"));
+    await expect(processVoicemail(db, "RE1")).resolves.toBeUndefined();
+    expect((await getVoicemail(db, "RE1"))?.transcriptionStatus).toBe("failed");
+  });
 });

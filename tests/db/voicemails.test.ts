@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { eq } from "drizzle-orm";
 import { createTestDb } from "../helpers/db";
 import type { DB } from "@/db";
 import { createCall } from "@/db/repo/calls";
 import { claimVoicemail, setTranscriptionStatus, getVoicemail, markListened } from "@/db/repo/voicemails";
+import { voicemails } from "@/db/schema";
 
 let db: DB;
 beforeEach(async () => {
@@ -31,5 +33,13 @@ describe("voicemails repo", () => {
     const vm = await getVoicemail(db, "RE1");
     expect(vm?.transcript).toBe("hello");
     expect(vm?.listenedAt).toBeInstanceOf(Date);
+  });
+
+  it("reclaims an in_progress row that is older than 10 minutes", async () => {
+    await claimVoicemail(db, { recordingSid: "RE1", callSid: "CA1", durationSeconds: 42 });
+    await setTranscriptionStatus(db, "RE1", "in_progress");
+    expect(await claimVoicemail(db, { recordingSid: "RE1", callSid: "CA1", durationSeconds: 42 })).toBe("already_handled");
+    await db.update(voicemails).set({ createdAt: new Date(Date.now() - 11 * 60_000) }).where(eq(voicemails.recordingSid, "RE1"));
+    expect(await claimVoicemail(db, { recordingSid: "RE1", callSid: "CA1", durationSeconds: 42 })).toBe("claimed");
   });
 });
