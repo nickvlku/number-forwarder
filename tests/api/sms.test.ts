@@ -3,7 +3,7 @@ import { dbMockFactory, envMockFactory, nextServerMockFactory, handlerTestContex
 import { signedRequest } from "../helpers/twilio";
 import { upsertContact } from "@/db/repo/contacts";
 import { getMessage } from "@/db/repo/messages";
-import { messages } from "@/db/schema";
+import { messages, contacts } from "@/db/schema";
 
 vi.mock("@/db", () => dbMockFactory());
 vi.mock("@/lib/env", () => envMockFactory());
@@ -22,6 +22,7 @@ const params = (over: Record<string, string> = {}) => ({
 });
 
 beforeEach(async () => {
+  await db.delete(contacts);
   await db.delete(messages);
   sendWithRetry.mockClear();
 });
