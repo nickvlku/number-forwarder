@@ -30,6 +30,15 @@ describe("loadEnv", () => {
     expect(() => loadEnv(missing)).toThrow(/OPENAI_API_KEY/);
   });
 
+  it("accepts an optional greeting url and treats an empty value as unset", () => {
+    expect(loadEnv(good).VOICEMAIL_GREETING_URL).toBeUndefined();
+    expect(loadEnv({ ...good, VOICEMAIL_GREETING_URL: "" }).VOICEMAIL_GREETING_URL).toBeUndefined();
+    expect(loadEnv({ ...good, VOICEMAIL_GREETING_URL: "https://example.fly.dev/greeting.mp3" }).VOICEMAIL_GREETING_URL).toBe(
+      "https://example.fly.dev/greeting.mp3",
+    );
+    expect(() => loadEnv({ ...good, VOICEMAIL_GREETING_URL: "greeting.mp3" })).toThrow(/VOICEMAIL_GREETING_URL/);
+  });
+
   it("rejects non-E.164 numbers", () => {
     expect(() => loadEnv({ ...good, CELL_NUMBER: "415-555-0100" })).toThrow(/CELL_NUMBER/);
   });

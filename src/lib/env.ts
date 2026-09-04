@@ -14,6 +14,8 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   DASHBOARD_PASSWORD: z.string().min(1),
   SESSION_SECRET: z.string().min(32, "at least 32 characters"),
+  /** Optional public URL of a recorded voicemail greeting (mp3/wav). Unset or empty means use TTS. */
+  VOICEMAIL_GREETING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
   NODE_ENV: z.string().optional(),
 });
 

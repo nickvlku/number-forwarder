@@ -27,7 +27,7 @@ export async function POST(req: Request): Promise<Response> {
       return twiml(hangupTwiml());
     }
     await setCallStatus(db, CallSid, "voicemail_pending", { dialStatus: DialCallStatus ?? "unknown" });
-    return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL }));
+    return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: env.VOICEMAIL_GREETING_URL }));
   } catch (err) {
     console.error("dial-status webhook failed", { CallSid, err });
     return twiml(errorTwiml());

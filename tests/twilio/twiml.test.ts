@@ -18,7 +18,7 @@ describe("twiml builders", () => {
     const xml = whisperTwiml({ callSid: "CA1", displayName: "Jane Doe", baseUrl });
     expect(xml).toBe(
       '<Response><Gather numDigits="1" timeout="5" action="https://vlku.test/api/twilio/whisper-result?callSid=CA1">' +
-        "<Say>Call for THE VLKU from Jane Doe. Press 1 to accept.</Say></Gather><Hangup/></Response>",
+        '<Say voice="Polly.Matthew-Neural">Call for THE VLKU from Jane Doe. Press 1 to accept.</Say></Gather><Hangup/></Response>',
     );
   });
 
@@ -29,16 +29,22 @@ describe("twiml builders", () => {
 
   it("voicemail greeting records with callbacks", () => {
     expect(voicemailTwiml({ baseUrl })).toBe(
-      "<Response><Say>You've reached THE VLKU. Please leave a message after the tone.</Say>" +
+      '<Response><Say voice="Polly.Matthew-Neural">You\'ve reached THE VLKU. Please leave a message after the tone.</Say>' +
         '<Record maxLength="180" finishOnKey="#" playBeep="true" recordingStatusCallback="https://vlku.test/api/twilio/recording" action="https://vlku.test/api/twilio/record-done"/></Response>',
     );
+  });
+
+  it("plays a recorded greeting instead of TTS when a url is given, escaping it", () => {
+    const xml = voicemailTwiml({ baseUrl, greetingUrl: "https://vlku.test/greeting.mp3?v=1&x=2" });
+    expect(xml.startsWith("<Response><Play>https://vlku.test/greeting.mp3?v=1&amp;x=2</Play><Record ")).toBe(true);
+    expect(xml).not.toContain("<Say");
   });
 
   it("small builders", () => {
     expect(acceptTwiml()).toBe("<Response></Response>");
     expect(emptyTwiml()).toBe("<Response></Response>");
     expect(hangupTwiml()).toBe("<Response><Hangup/></Response>");
-    expect(errorTwiml()).toBe("<Response><Say>Sorry, something went wrong.</Say><Hangup/></Response>");
+    expect(errorTwiml()).toBe('<Response><Say voice="Polly.Matthew-Neural">Sorry, something went wrong.</Say><Hangup/></Response>');
     expect(escapeXml(`a"b'c`)).toBe("a&quot;b&apos;c");
   });
 });

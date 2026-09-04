@@ -19,7 +19,7 @@ export async function POST(req: Request): Promise<Response> {
 
     if (!(await getForwardingEnabled(db))) {
       await setCallStatus(db, CallSid, "voicemail_pending", { dialStatus: "forwarding_off" });
-      return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL }));
+      return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: env.VOICEMAIL_GREETING_URL }));
     }
 
     const callerId = normalizePhone(From) ?? env.TWILIO_NUMBER;

@@ -56,4 +56,5 @@ exactly match the URL Twilio calls, including scheme and host.
 
 - Forwarding can be paused from the dashboard header; calls then go straight to voicemail.
 - A failed transcription shows a retry button on the call.
+- Voicemail greeting: text-to-speech by default (Polly neural voice). To use your own recording, drop `greeting.mp3` into `public/`, set `VOICEMAIL_GREETING_URL=https://<your host>/greeting.mp3`, and redeploy. Twilio fetches the file itself, so the URL must be public. The greeting text and the whisper text live in `src/lib/twilio/twiml.ts`.
 - Logs: `fly logs`. Health: `https://vlku-line.fly.dev/api/health`.
