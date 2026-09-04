@@ -4,7 +4,7 @@ import { signedRequest, voiceParams } from "../helpers/twilio";
 import { upsertContact } from "@/db/repo/contacts";
 import { setForwardingEnabled } from "@/db/repo/settings";
 import { getCall } from "@/db/repo/calls";
-import { calls } from "@/db/schema";
+import { calls, contacts } from "@/db/schema";
 
 vi.mock("@/db", () => dbMockFactory());
 vi.mock("@/lib/env", () => envMockFactory());
@@ -16,6 +16,7 @@ const { POST: whisper } = await import("@/app/api/twilio/whisper/route");
 const { POST: whisperResult } = await import("@/app/api/twilio/whisper-result/route");
 
 beforeEach(async () => {
+  await db.delete(contacts);
   await db.delete(calls);
   await setForwardingEnabled(db, true);
 });
