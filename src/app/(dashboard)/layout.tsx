@@ -13,9 +13,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const db = await getDb();
   const [forwarding, unread] = await Promise.all([getForwardingEnabled(db), countUnread(db)]);
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       <Header forwarding={forwarding} />
-      <main className="flex-1 flex flex-col">{children}</main>
+      <main className="flex-1 min-h-0 flex flex-col">{children}</main>
       <Poller intervalMs={30_000} />
       <UnreadTitle count={unread} />
     </div>

@@ -24,11 +24,11 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const showListOnMobile = !selected;
   return (
     <div className="flex-1 grid md:grid-cols-[minmax(320px,2fr)_3fr]" style={{ minHeight: 0 }}>
-      <section className={`${showListOnMobile ? "flex" : "hidden md:flex"} flex-col border-r`} style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
+      <section className={`${showListOnMobile ? "flex" : "hidden md:flex"} flex-col min-h-0 border-r`} style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
         <FilterChips active={filter} />
         <FeedList items={items} selectedId={selected?.id ?? null} filter={filter} nextBefore={nextBefore} />
       </section>
-      <section className={`${selected ? "flex" : "hidden md:flex"} flex-col`}>
+      <section className={`${selected ? "flex" : "hidden md:flex"} flex-col min-h-0`}>
         <DetailPane item={selected} filter={filter} />
       </section>
     </div>

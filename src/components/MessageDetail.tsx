@@ -31,7 +31,7 @@ export function MessageDetail({ item }: { item: Extract<FeedItem, { kind: "text"
         </div>
       )}
       {message.forwardedAt ? <p className="muted text-xs">Relayed to your cell.</p> : <p className="text-xs text-danger">Relay to your cell failed.</p>}
-      {phone && <ContactCard phone={phone} name={item.contact?.name ?? ""} notes={item.contact?.notes ?? ""} />}
+      {phone && <ContactCard key={phone} phone={phone} name={item.contact?.name ?? ""} notes={item.contact?.notes ?? ""} />}
     </div>
   );
 }

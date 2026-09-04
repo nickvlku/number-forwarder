@@ -57,7 +57,7 @@ export function CallDetail({ item }: { item: Extract<FeedItem, { kind: "call" }>
         </section>
       )}
 
-      {phone && <ContactCard phone={phone} name={item.contact?.name ?? ""} notes={item.contact?.notes ?? ""} />}
+      {phone && <ContactCard key={phone} phone={phone} name={item.contact?.name ?? ""} notes={item.contact?.notes ?? ""} />}
     </div>
   );
 }
