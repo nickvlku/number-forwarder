@@ -1,5 +1,6 @@
 import { getDb } from "@/db/get";
 import { getEnv } from "@/lib/env";
+import { resolveGreetingUrl } from "@/lib/greeting";
 import { readWebhook, twiml } from "@/lib/twilio/webhook";
 import { voicemailTwiml, hangupTwiml, errorTwiml } from "@/lib/twilio/twiml";
 import { getCall, setCallStatus } from "@/db/repo/calls";
@@ -27,7 +28,7 @@ export async function POST(req: Request): Promise<Response> {
       return twiml(hangupTwiml());
     }
     await setCallStatus(db, CallSid, "voicemail_pending", { dialStatus: DialCallStatus ?? "unknown" });
-    return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: env.VOICEMAIL_GREETING_URL }));
+    return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: await resolveGreetingUrl(db, env) }));
   } catch (err) {
     console.error("dial-status webhook failed", { CallSid, err });
     return twiml(errorTwiml());

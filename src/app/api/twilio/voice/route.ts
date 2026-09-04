@@ -1,5 +1,6 @@
 import { getDb } from "@/db/get";
 import { getEnv } from "@/lib/env";
+import { resolveGreetingUrl } from "@/lib/greeting";
 import { normalizePhone } from "@/lib/phone";
 import { readWebhook, twiml } from "@/lib/twilio/webhook";
 import { dialTwiml, voicemailTwiml, errorTwiml } from "@/lib/twilio/twiml";
@@ -19,7 +20,7 @@ export async function POST(req: Request): Promise<Response> {
 
     if (!(await getForwardingEnabled(db))) {
       await setCallStatus(db, CallSid, "voicemail_pending", { dialStatus: "forwarding_off" });
-      return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: env.VOICEMAIL_GREETING_URL }));
+      return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: await resolveGreetingUrl(db, env) }));
     }
 
     const callerId = normalizePhone(From) ?? env.TWILIO_NUMBER;

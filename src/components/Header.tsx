@@ -8,6 +8,7 @@ export function Header({ forwarding }: { forwarding: boolean }) {
       <nav className="flex items-center gap-3 sm:gap-5">
         <Link href="/" className="wordmark whitespace-nowrap">THE VLKU</Link>
         <Link href="/contacts" className="muted text-sm font-semibold hover:underline whitespace-nowrap">Contacts</Link>
+        <Link href="/settings" className="muted text-sm font-semibold hover:underline whitespace-nowrap">Settings</Link>
       </nav>
       <div className="flex items-center gap-3 sm:gap-4">
         <ForwardingToggle enabled={forwarding} />

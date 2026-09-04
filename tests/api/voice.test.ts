@@ -4,7 +4,8 @@ import { signedRequest, voiceParams } from "../helpers/twilio";
 import { upsertContact } from "@/db/repo/contacts";
 import { setForwardingEnabled } from "@/db/repo/settings";
 import { getCall } from "@/db/repo/calls";
-import { calls, contacts } from "@/db/schema";
+import { calls, contacts, greeting } from "@/db/schema";
+import { saveGreeting } from "@/db/repo/greeting";
 
 vi.mock("@/db", () => dbMockFactory());
 vi.mock("@/lib/env", () => envMockFactory());
@@ -18,6 +19,7 @@ const { POST: whisperResult } = await import("@/app/api/twilio/whisper-result/ro
 beforeEach(async () => {
   await db.delete(contacts);
   await db.delete(calls);
+  await db.delete(greeting);
   await setForwardingEnabled(db, true);
 });
 
@@ -51,6 +53,17 @@ describe("POST /api/twilio/voice", () => {
     expect(xml).toContain("You've reached THE VLKU");
     expect(xml).not.toContain("<Dial");
     expect((await getCall(db, voiceParams().CallSid))?.status).toBe("voicemail_pending");
+  });
+});
+
+describe("POST /api/twilio/voice greeting precedence", () => {
+  it("plays the recorded greeting from the app when one is saved", async () => {
+    await setForwardingEnabled(db, false);
+    const meta = await saveGreeting(db, { audio: Buffer.from([1, 2, 3]), contentType: "audio/wav", durationSeconds: 3 });
+    const res = await voice(signedRequest("/api/twilio/voice", voiceParams()));
+    const xml = await res.text();
+    expect(xml).toContain(`<Play>https://vlku.test/api/greeting.wav?v=${meta.updatedAt.getTime()}</Play>`);
+    expect(xml).not.toContain("<Say");
   });
 });
 

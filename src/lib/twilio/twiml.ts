@@ -16,6 +16,9 @@ const wrap = (inner: string) => `<Response>${inner}</Response>`;
 export const TTS_VOICE = "Polly.Matthew-Neural";
 const say = (text: string) => `<Say voice="${TTS_VOICE}">${text}</Say>`;
 
+/** Spoken when no recorded greeting is configured. */
+export const VOICEMAIL_GREETING_TEXT = "You've reached THE VLKU. Please leave a message after the tone.";
+
 export function dialTwiml(o: { callSid: string; callerId: string; cellNumber: string; baseUrl: string }): string {
   const whisper = `${o.baseUrl}/api/twilio/whisper?callSid=${encodeURIComponent(o.callSid)}`;
   const action = `${o.baseUrl}/api/twilio/dial-status`;
@@ -49,7 +52,7 @@ export function hangupTwiml(): string {
 export function voicemailTwiml(o: { baseUrl: string; greetingUrl?: string }): string {
   const greeting = o.greetingUrl
     ? `<Play>${escapeXml(o.greetingUrl)}</Play>`
-    : say("You've reached THE VLKU. Please leave a message after the tone.");
+    : say(VOICEMAIL_GREETING_TEXT);
   return wrap(
     greeting +
       `<Record maxLength="180" finishOnKey="#" playBeep="true" ` +

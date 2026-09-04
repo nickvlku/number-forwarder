@@ -1,4 +1,17 @@
-import { pgTable, text, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, jsonb, index, customType } from "drizzle-orm/pg-core";
+
+/** Postgres bytea; postgres-js hands back a Buffer, PGlite a Uint8Array. */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value) {
+    return value;
+  },
+  fromDriver(value) {
+    return Buffer.from(value as Uint8Array);
+  },
+});
 
 export const CALL_STATUSES = ["ringing", "completed", "missed", "voicemail_pending", "voicemail", "failed"] as const;
 export type CallStatus = (typeof CALL_STATUSES)[number];
@@ -65,6 +78,16 @@ export const messages = pgTable(
 export const settings = pgTable("settings", {
   id: integer("id").primaryKey(),
   forwardingEnabled: boolean("forwarding_enabled").notNull().default(true),
+});
+
+/** Single-row table (id = 1) holding the recorded voicemail greeting, if any. */
+export const greeting = pgTable("greeting", {
+  id: integer("id").primaryKey(),
+  audio: bytea("audio").notNull(),
+  contentType: text("content_type").notNull(),
+  durationSeconds: integer("duration_seconds").notNull(),
+  byteLength: integer("byte_length").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Call = typeof calls.$inferSelect;
