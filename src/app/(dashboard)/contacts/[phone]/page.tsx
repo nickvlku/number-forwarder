@@ -8,8 +8,17 @@ import { FeedRow } from "@/components/FeedRow";
 
 export const dynamic = "force-dynamic";
 
+function safeDecode(s: string): string | null {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return null;
+  }
+}
+
 export default async function ContactPage({ params }: { params: Promise<{ phone: string }> }) {
-  const phone = normalizePhone(decodeURIComponent((await params).phone));
+  const raw = safeDecode((await params).phone);
+  const phone = raw ? normalizePhone(raw) : null;
   if (!phone) notFound();
   const db = await getDb();
   const [contact, history] = await Promise.all([getContact(db, phone), historyFor(db, phone)]);
