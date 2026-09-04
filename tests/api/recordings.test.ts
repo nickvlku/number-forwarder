@@ -10,9 +10,12 @@ vi.mock("@/lib/env", () => envMockFactory());
 vi.mock("next/server", () => nextServerMockFactory());
 const hasSession = vi.fn(async () => true);
 vi.mock("@/lib/session", () => ({ hasSession: () => hasSession() }));
-const fetchRecording = vi.fn();
+const fetchRecording = vi.fn<(s: string, o?: { range?: string }) => Promise<Response>>();
 const fetchMedia = vi.fn();
-vi.mock("@/lib/twilio/rest", () => ({ fetchRecording: (s: string) => fetchRecording(s), fetchMedia: (u: string) => fetchMedia(u) }));
+vi.mock("@/lib/twilio/rest", () => ({
+  fetchRecording: (s: string, o?: { range?: string }) => fetchRecording(s, o),
+  fetchMedia: (u: string) => fetchMedia(u),
+}));
 
 const { db } = await handlerTestContext();
 const { GET: getRecording } = await import("@/app/api/recordings/[sid]/route");
@@ -53,6 +56,17 @@ describe("GET /api/recordings/[sid]", () => {
     expect(res.status).toBe(404);
     expect(fetchRecording).not.toHaveBeenCalled();
   });
+
+  it("passes a range request through as 206 with content-range", async () => {
+    fetchRecording.mockResolvedValue(
+      new Response("part", { status: 206, headers: { "content-type": "audio/mpeg", "content-range": "bytes 0-3/100", "accept-ranges": "bytes" } }),
+    );
+    const res = await getRecording(new Request("http://x/api/recordings/RE1", { headers: { range: "bytes=0-3" } }), params({ sid: "RE1" }));
+    expect(res.status).toBe(206);
+    expect(res.headers.get("content-range")).toBe("bytes 0-3/100");
+    expect(res.headers.get("accept-ranges")).toBe("bytes");
+    expect(fetchRecording).toHaveBeenCalledWith("RE1", { range: "bytes=0-3" });
+  });
 });
 
 describe("GET /api/media/[sid]/[index]", () => {
@@ -65,5 +79,21 @@ describe("GET /api/media/[sid]/[index]", () => {
   it("404s for an out-of-range index", async () => {
     const res = await getMedia(new Request("http://x/api/media/SM1/5"), params({ sid: "SM1", index: "5" }));
     expect(res.status).toBe(404);
+  });
+
+  it("serves safe image types inline with nosniff and a sandbox CSP", async () => {
+    fetchMedia.mockResolvedValue(new Response("jpg", { status: 200, headers: { "content-type": "image/jpeg" } }));
+    const res = await getMedia(new Request("http://x/api/media/SM1/0"), params({ sid: "SM1", index: "0" }));
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("content-security-policy")).toContain("sandbox");
+    expect(res.headers.get("content-disposition")).toBeNull();
+  });
+
+  it("forces download for unsafe types like svg or html", async () => {
+    fetchMedia.mockResolvedValue(new Response("<svg onload=alert(1)/>", { status: 200, headers: { "content-type": "image/svg+xml" } }));
+    const res = await getMedia(new Request("http://x/api/media/SM1/0"), params({ sid: "SM1", index: "0" }));
+    expect(res.headers.get("content-type")).toBe("application/octet-stream");
+    expect(res.headers.get("content-disposition")).toMatch(/^attachment/);
   });
 });

@@ -46,6 +46,13 @@ describe("recordings", () => {
     expect(init.headers.authorization).toBe(expectedAuth);
   });
 
+  it("forwards a Range header when given", async () => {
+    fetchMock.mockResolvedValue(new Response("part", { status: 206 }));
+    await rest.fetchRecording("RE1", { range: "bytes=0-99" });
+    expect(fetchMock.mock.calls[0][1].headers.range).toBe("bytes=0-99");
+    expect(fetchMock.mock.calls[0][1].headers.authorization).toBe(expectedAuth);
+  });
+
   it("deletes a recording and tolerates 404", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
     await expect(rest.deleteRecording("RE1")).resolves.toBeUndefined();

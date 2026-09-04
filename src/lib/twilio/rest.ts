@@ -43,8 +43,10 @@ export async function sendSms(o: { to: string; body: string }): Promise<{ sid: s
 }
 
 /** Streams the recording as MP3. Caller checks res.ok. */
-export async function fetchRecording(recordingSid: string): Promise<Response> {
-  return twilioFetch(accountUrl(`/Recordings/${encodeURIComponent(recordingSid)}.mp3`));
+export async function fetchRecording(recordingSid: string, opts: { range?: string } = {}): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (opts.range) headers.range = opts.range;
+  return twilioFetch(accountUrl(`/Recordings/${encodeURIComponent(recordingSid)}.mp3`), { headers });
 }
 
 export async function deleteRecording(recordingSid: string): Promise<void> {
