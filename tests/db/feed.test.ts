@@ -52,6 +52,29 @@ describe("listFeed", () => {
     expect(page3.nextBefore).toBeNull();
   });
 
+  it("missed filter excludes a live ringing call and includes a stale pending voicemail", async () => {
+    const now = new Date();
+    await db.insert(calls).values([
+      { sid: "CA_live", fromNumber: "+14155550000", toNumber: "+1", status: "ringing", startedAt: new Date(now.getTime() - 60_000) },
+      { sid: "CA_stale", fromNumber: "+14155550000", toNumber: "+1", status: "voicemail_pending", startedAt: new Date(now.getTime() - 20 * 60_000) },
+    ]);
+    const ids = (await listFeed(db, { filter: "missed", limit: 20 })).items.map((i) => i.id);
+    expect(ids).toContain("CA_stale");
+    expect(ids).toContain("CA2");
+    expect(ids).not.toContain("CA_live");
+  });
+
+  it("voicemail filter includes a fresh pending voicemail but not a stale one", async () => {
+    const now = new Date();
+    await db.insert(calls).values([
+      { sid: "CA_fresh", fromNumber: "+14155550000", toNumber: "+1", status: "voicemail_pending", startedAt: new Date(now.getTime() - 60_000) },
+      { sid: "CA_stale", fromNumber: "+14155550000", toNumber: "+1", status: "voicemail_pending", startedAt: new Date(now.getTime() - 20 * 60_000) },
+    ]);
+    const ids = (await listFeed(db, { filter: "voicemail", limit: 20 })).items.map((i) => i.id);
+    expect(ids).toEqual(expect.arrayContaining(["CA_fresh", "CA3"]));
+    expect(ids).not.toContain("CA_stale");
+  });
+
   it("marks unread voicemails and texts", async () => {
     expect(await countUnread(db)).toBe(3); // RE3, SM1, SM2
     await markListened(db, "RE3");

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, isNull, count } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, gte, or, isNull, count, type SQL } from "drizzle-orm";
 import type { DB } from "@/db";
 import { calls, voicemails, messages, contacts, type Call, type Voicemail, type Message, type Contact, type CallStatus } from "@/db/schema";
 
@@ -9,7 +9,7 @@ export type FeedItem =
   | { kind: "call"; id: string; at: Date; call: Call; voicemail: Voicemail | null; contact: Contact | null; unread: boolean }
   | { kind: "text"; id: string; at: Date; message: Message; contact: Contact | null; unread: boolean };
 
-const STALE_MS = 15 * 60_000;
+export const STALE_MS = 15 * 60_000;
 
 export function effectiveStatus(call: Call, now: Date = new Date()): CallStatus {
   if ((call.status === "ringing" || call.status === "voicemail_pending") && now.getTime() - call.startedAt.getTime() > STALE_MS) {
@@ -41,19 +41,25 @@ function textItem(row: { messages: Message; contacts: Contact | null }): FeedIte
   };
 }
 
-function callStatusesFor(filter: FeedFilter): CallStatus[] | null {
+/** SQL mirror of effectiveStatus(): stale ringing/voicemail_pending rows count as missed. */
+function callFilterFor(filter: FeedFilter, now: Date): SQL | undefined {
+  const cutoff = new Date(now.getTime() - STALE_MS);
+  const pendingStatuses: CallStatus[] = ["ringing", "voicemail_pending"];
   switch (filter) {
-    case "voicemail": return ["voicemail", "voicemail_pending"];
-    case "missed": return ["missed", "failed", "ringing"];
-    case "answered": return ["completed"];
-    case "text": return [];
-    default: return null;
+    case "answered":
+      return inArray(calls.status, ["completed"]);
+    case "voicemail":
+      return or(eq(calls.status, "voicemail"), and(eq(calls.status, "voicemail_pending"), gte(calls.startedAt, cutoff)));
+    case "missed":
+      return or(inArray(calls.status, ["missed", "failed"]), and(inArray(calls.status, pendingStatuses), lt(calls.startedAt, cutoff)));
+    default:
+      return undefined;
   }
 }
 
-async function queryCalls(db: DB, o: { statuses: CallStatus[] | null; before?: Date; limit: number; phone?: string }) {
+async function queryCalls(db: DB, o: { filter: SQL | undefined; before?: Date; limit: number; phone?: string }) {
   const where = and(
-    o.statuses ? inArray(calls.status, o.statuses) : undefined,
+    o.filter,
     o.before ? lt(calls.startedAt, o.before) : undefined,
     o.phone ? eq(calls.fromNumber, o.phone) : undefined,
   );
@@ -87,11 +93,10 @@ export async function listFeed(
   db: DB,
   o: { filter: FeedFilter; before?: Date; limit: number },
 ): Promise<{ items: FeedItem[]; nextBefore: Date | null }> {
-  const statuses = callStatusesFor(o.filter);
   const wantCalls = o.filter !== "text";
   const wantTexts = o.filter === "all" || o.filter === "text";
   const [c, t] = await Promise.all([
-    wantCalls ? queryCalls(db, { statuses, before: o.before, limit: o.limit + 1 }) : [],
+    wantCalls ? queryCalls(db, { filter: callFilterFor(o.filter, new Date()), before: o.before, limit: o.limit + 1 }) : [],
     wantTexts ? queryTexts(db, { before: o.before, limit: o.limit + 1 }) : [],
   ]);
   const merged = [...c, ...t].sort((a, b) => b.at.getTime() - a.at.getTime());
@@ -128,7 +133,7 @@ export async function countUnread(db: DB): Promise<number> {
 
 export async function historyFor(db: DB, phone: string): Promise<FeedItem[]> {
   const [c, t] = await Promise.all([
-    queryCalls(db, { statuses: null, limit: 500, phone }),
+    queryCalls(db, { filter: undefined, limit: 500, phone }),
     queryTexts(db, { limit: 500, phone }),
   ]);
   return [...c, ...t].sort((a, b) => b.at.getTime() - a.at.getTime());
