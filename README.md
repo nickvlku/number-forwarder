@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Number Forwarder (415-THE-VLKU)
 
-## Getting Started
+Forwards calls to 415-THE-VLKU to a cell phone with a whisper screen ("press 1 to accept"),
+records voicemails with Whisper transcripts, relays inbound texts, and shows it all in a
+password-protected dashboard.
 
-First, run the development server:
+Design: `docs/superpowers/specs/2026-09-02-number-forwarder-design.md`
+
+## Local development
+
+1. Postgres running locally. On this machine Homebrew Postgres 17 listens on port 55432, so
+   `DATABASE_URL=postgres://localhost:55432/number_forwarder`; then
+   `createdb -h localhost -p 55432 number_forwarder`.
+2. `cp .env.example .env.local` and fill it in. `SESSION_SECRET`: `openssl rand -hex 32`.
+3. `npm install && npm run db:migrate && npm run db:seed`
+4. `npm run dev`, open http://localhost:3000, sign in with `DASHBOARD_PASSWORD`.
+5. To receive real webhooks locally: `ngrok http 3000`, then
+   `npm run twilio:configure -- https://<your-ngrok-host>` and set `PUBLIC_BASE_URL` in `.env.local`
+   to the same URL (signature validation depends on it). Restart `npm run dev`.
+
+Tests: `npm test`. End-to-end: `npm run e2e` (needs the local Postgres).
+
+## Deploy to Fly.io
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+fly launch --no-deploy --copy-config --name vlku-line
+fly postgres create --name vlku-line-db --region sjc
+fly postgres attach vlku-line-db            # sets DATABASE_URL
+fly secrets set \
+  TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... \
+  TWILIO_NUMBER=+14158438558 CELL_NUMBER=+1... \
+  PUBLIC_BASE_URL=https://vlku-line.fly.dev \
+  OPENAI_API_KEY=sk-... DASHBOARD_PASSWORD=... SESSION_SECRET=$(openssl rand -hex 32)
+fly deploy                                   # release command runs migrations
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then point the Twilio number at the app (run locally with the production values exported):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+PUBLIC_BASE_URL=https://vlku-line.fly.dev TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_NUMBER=+14158438558 \
+  CELL_NUMBER=+1... OPENAI_API_KEY=x DASHBOARD_PASSWORD=x SESSION_SECRET=00000000000000000000000000000000 DATABASE_URL=x \
+  npm run twilio:configure
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How a call flows
 
-## Learn More
+voice → Dial cell with whisper → whisper (Gather "press 1") → whisper-result → dial-status
+→ (voicemail: Record) → record-done → recording (Whisper transcript + SMS) → status (totals).
 
-To learn more about Next.js, take a look at the following resources:
+Every webhook validates `X-Twilio-Signature` against `PUBLIC_BASE_URL`, so that value must
+exactly match the URL Twilio calls, including scheme and host.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Operations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Forwarding can be paused from the dashboard header; calls then go straight to voicemail.
+- A failed transcription shows a retry button on the call.
+- Logs: `fly logs`. Health: `https://vlku-line.fly.dev/api/health`.
