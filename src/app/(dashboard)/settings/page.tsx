@@ -16,7 +16,7 @@ export default async function SettingsPage() {
         <div className="label">Voicemail greeting</div>
         {meta ? (
           <div className="flex flex-col gap-2">
-            <audio controls preload="none" src={`/api/greeting.wav?v=${meta.updatedAt.getTime()}`} className="w-full" />
+            <audio controls preload="metadata" src={`/api/greeting.wav?v=${meta.updatedAt.getTime()}`} className="w-full" />
             <div className="muted text-xs num">
               Your recording · {formatDuration(meta.durationSeconds)} · saved {formatDateTime(meta.updatedAt)}
             </div>
