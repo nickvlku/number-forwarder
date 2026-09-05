@@ -52,6 +52,10 @@ voice → Dial cell with whisper → whisper (Gather "press 1") → whisper-resu
 Every webhook validates `X-Twilio-Signature` against `PUBLIC_BASE_URL`, so that value must
 exactly match the URL Twilio calls, including scheme and host.
 
+## Legal pages for Twilio A2P registration
+
+`content/legal/privacy.md` and `content/legal/terms.md` are served publicly (no login) at `/privacy` and `/terms`, so the campaign form can link to `https://<your host>/privacy` and `https://<your host>/terms`. Edit the markdown to change them; the contact address and effective date are in the files.
+
 ## Operations
 
 - Forwarding can be paused from the dashboard header; calls then go straight to voicemail.
