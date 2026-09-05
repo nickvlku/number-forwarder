@@ -55,6 +55,7 @@ exactly match the URL Twilio calls, including scheme and host.
 ## Operations
 
 - Forwarding can be paused from the dashboard header; calls then go straight to voicemail.
+- Caller ID on the forwarded leg is the Twilio number by default (`FORWARD_CALLER_ID=twilio`), because carriers intercept calls that present a number Twilio does not own; the whisper announces the real caller. Set `FORWARD_CALLER_ID=caller` to show the caller's number instead if your carrier allows it.
 - A failed transcription shows a retry button on the call.
 - Voicemail greeting: record one in the dashboard under Settings (mic access needs HTTPS or localhost). It is stored in Postgres and served publicly at `/api/greeting.wav` for Twilio to play. Precedence: dashboard recording, then `VOICEMAIL_GREETING_URL` (a public MP3/WAV you host yourself), then text-to-speech with a Polly neural voice. The greeting text and the whisper text live in `src/lib/twilio/twiml.ts`.
 - Logs: `fly logs`. Health: `https://vlku-line.fly.dev/api/health`.

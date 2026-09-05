@@ -1,9 +1,9 @@
 import { getDb } from "@/db/get";
 import { getEnv } from "@/lib/env";
 import { resolveGreetingUrl } from "@/lib/greeting";
-import { normalizePhone } from "@/lib/phone";
 import { readWebhook, twiml } from "@/lib/twilio/webhook";
 import { dialTwiml, voicemailTwiml, errorTwiml } from "@/lib/twilio/twiml";
+import { forwardCallerId } from "@/lib/twilio/caller-id";
 import { createCall, setCallStatus } from "@/db/repo/calls";
 import { getForwardingEnabled } from "@/db/repo/settings";
 
@@ -23,7 +23,7 @@ export async function POST(req: Request): Promise<Response> {
       return twiml(voicemailTwiml({ baseUrl: env.PUBLIC_BASE_URL, greetingUrl: await resolveGreetingUrl(db, env) }));
     }
 
-    const callerId = normalizePhone(From) ?? env.TWILIO_NUMBER;
+    const callerId = forwardCallerId({ mode: env.FORWARD_CALLER_ID, twilioNumber: env.TWILIO_NUMBER, from: From ?? "" });
     return twiml(dialTwiml({ callSid: CallSid, callerId, cellNumber: env.CELL_NUMBER, baseUrl: env.PUBLIC_BASE_URL }));
   } catch (err) {
     console.error("voice webhook failed", { CallSid, err });

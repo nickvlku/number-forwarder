@@ -39,6 +39,13 @@ describe("loadEnv", () => {
     expect(() => loadEnv({ ...good, VOICEMAIL_GREETING_URL: "greeting.mp3" })).toThrow(/VOICEMAIL_GREETING_URL/);
   });
 
+  it("defaults FORWARD_CALLER_ID to twilio and rejects other values", () => {
+    expect(loadEnv(good).FORWARD_CALLER_ID).toBe("twilio");
+    expect(loadEnv({ ...good, FORWARD_CALLER_ID: "" }).FORWARD_CALLER_ID).toBe("twilio");
+    expect(loadEnv({ ...good, FORWARD_CALLER_ID: "caller" }).FORWARD_CALLER_ID).toBe("caller");
+    expect(() => loadEnv({ ...good, FORWARD_CALLER_ID: "spoof" })).toThrow(/FORWARD_CALLER_ID/);
+  });
+
   it("rejects non-E.164 numbers", () => {
     expect(() => loadEnv({ ...good, CELL_NUMBER: "415-555-0100" })).toThrow(/CELL_NUMBER/);
   });

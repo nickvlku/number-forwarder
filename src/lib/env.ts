@@ -14,6 +14,12 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   DASHBOARD_PASSWORD: z.string().min(1),
   SESSION_SECRET: z.string().min(32, "at least 32 characters"),
+  /**
+   * Caller ID presented to the cell when forwarding. "twilio" (default) shows the Twilio number, which is
+   * fully attested and rings through carrier spam screening; "caller" shows the real caller's number, which
+   * some carriers intercept as a low-attestation call.
+   */
+  FORWARD_CALLER_ID: z.preprocess((v) => (v === "" || v === undefined ? "twilio" : v), z.enum(["twilio", "caller"])),
   /** Optional public URL of a recorded voicemail greeting (mp3/wav). Unset or empty means use TTS. */
   VOICEMAIL_GREETING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
   NODE_ENV: z.string().optional(),

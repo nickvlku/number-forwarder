@@ -30,17 +30,18 @@ describe("POST /api/twilio/voice", () => {
     expect(await getCall(db, voiceParams().CallSid)).toBeNull();
   });
 
-  it("creates a ringing call and dials the cell with the caller's number as caller id", async () => {
+  it("creates a ringing call and dials the cell presenting the Twilio number (default FORWARD_CALLER_ID=twilio)", async () => {
     const res = await voice(signedRequest("/api/twilio/voice", voiceParams()));
     const xml = await res.text();
     expect(res.status).toBe(200);
-    expect(xml).toContain('callerId="+14155550199"');
+    expect(xml).toContain('callerId="+14158438558"');
+    expect(xml).not.toContain('callerId="+14155550199"');
     expect(xml).toContain(">+14155550100</Number>");
     expect(xml).toContain("/api/twilio/whisper?callSid=CA0000000000000000000000000000001");
     expect((await getCall(db, voiceParams().CallSid))?.status).toBe("ringing");
   });
 
-  it("falls back to the Twilio number as caller id when From is withheld", async () => {
+  it("still records the raw From even when the caller id shown is the Twilio number", async () => {
     const res = await voice(signedRequest("/api/twilio/voice", voiceParams({ From: "anonymous" })));
     expect(await res.text()).toContain('callerId="+14158438558"');
     expect((await getCall(db, voiceParams().CallSid))?.fromNumber).toBe("anonymous");
